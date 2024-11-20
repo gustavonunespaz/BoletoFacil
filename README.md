@@ -36,13 +36,9 @@ Esse sistema foi criado tendo em vista a dificuldade da minha empresa em fazer a
 
 ### Executando o Programa
 
-1. Navegue até a pasta do projeto:
+1. Execute o programa Python:
    ```sh
-   cd seu-repositorio
-   ```
-2. Execute o programa Python:
-   ```sh
-   python boleto_facil.py
+   python BoletoFacil.py
    ```
 
 ## Usando o Sistema
