@@ -5,7 +5,7 @@ Visão Geral
 
 Boleto Fácil - Nunes|Paz é um software desenvolvido para facilitar o gerenciamento de boletos de clientes, incluindo a seleção, processamento, impressão e organização de arquivos PDF. O sistema foi projetado para melhorar a eficiência no controle de documentos financeiros, proporcionando uma interface intuitiva para os usuários.
 
-Funcionalidades
+Funcionalidades - 
 Carregar PDF: Selecione arquivos PDF para processamento e extração de informações relevantes.
 Selecionar Todos: Marque todos os PDFs carregados para serem impressos ou excluídos.
 Processamento Automático: Extração automática dos dados de clientes e criação de novos PDFs organizados.
@@ -20,8 +20,8 @@ Tkinter: Biblioteca para criação da interface gráfica do usuário (GUI).
 PyPDF2, pdfplumber e PyMuPDF (fitz): Bibliotecas usadas para manipulação de PDFs, extração de texto e edição.
 Win32api: Utilizada para comandos do sistema Windows, como a abertura da janela de impressão.
 
-Como Utilizar
-Requisitos
+Como Utilizar - 
+Requisitos - 
 Python 3.8+
 Bibliotecas Python: As bibliotecas listadas abaixo podem ser instaladas usando o comando pip:
 pip install PyPDF2 pdfplumber pymupdf pywin32 reportlab
@@ -33,7 +33,7 @@ cd seu-repositorio
 Execute o programa Python:
 python boleto_facil.py
 
-Usando o Sistema
+Usando o Sistema - 
 Carregar PDF: Clique no botão Carregar PDF e selecione os arquivos que deseja processar.
 Selecionar Todos: Clique no botão Selecionar Todos para marcar todos os PDFs carregados.
 Imprimir: Clique em Imprimir para abrir a janela de impressão com as configurações necessárias.
@@ -41,7 +41,7 @@ Excluir: Utilize o botão Excluir para remover os PDFs selecionados.
 Boletos: Clique em Boletos para acessar rapidamente a pasta onde os boletos estão organizados.
 Ajuda: Clique no botão Ajuda para obter informações sobre como usar o sistema.
 
-Estrutura do Projeto
+Estrutura do Projeto - 
 boleto_facil.py: Arquivo principal com o código do sistema.
 Compilados/: Pasta onde os PDFs compilados são salvos.
 boletos/: Pasta onde os boletos processados são salvos, organizados por ano e mês.
@@ -56,13 +56,13 @@ Execute o programa com permissão de administrador, caso encontre erros ao salva
 Erro ao Abrir PDF:
 Verifique se o caminho do arquivo PDF é válido e se o arquivo não foi movido ou excluído.
 
-Contribuição
+Contribuição - 
 Se desejar contribuir para o projeto, sinta-se à vontade para fazer um fork do repositório, criar uma branch com suas melhorias e enviar um pull request. Todas as contribuições são bem-vindas!
 
-Licença
+Licença - 
 Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para mais detalhes.
 
-Contato
+Contato - 
 Gustavo Paz
 41995953862
 gust.nunes.paz@gmail.com
