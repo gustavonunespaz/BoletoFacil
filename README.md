@@ -3,17 +3,17 @@ Boleto Fácil - Nunes|Paz
 
 ## Visão Geral
 
-Boleto Fácil - Nunes|Paz é um software desenvolvido para facilitar o gerenciamento de boletos de clientes, incluindo a seleção, processamento, impressão e organização de arquivos PDF. O sistema foi projetado para melhorar a eficiência no controle de documentos financeiros, proporcionando uma interface intuitiva para os usuários. 
-Foi desenvolvido pensando na formatação para impressão das vias físicas dos boletos de nossos clientes.
+Boleto Fácil - Nunes|Paz é um software desenvolvido para facilitar o gerenciamento de boletos de clientes, incluindo a seleção, processamento, impressão e organização de arquivos PDF. O sistema foi projetado para melhorar a eficiência no controle de documentos financeiros, proporcionando uma interface intuitiva para os usuários.
+Esse sistema foi criado tendo em vista a dificuldade da minha empresa em fazer a impressão dos boletos. Com o sistema otimizamos tempo e recursos.
 
 ## Funcionalidades
 
 - **Carregar PDF**: Selecione arquivos PDF para processamento e extração de informações relevantes dos boletos.
 - **Selecionar Todos**: Marque todos os PDFs carregados para serem impressos ou excluídos.
 - **Processamento Automático**: Extração automática dos dados dos clientes e criação de novos PDFs organizados.
-- **Imprimir**: Compile os PDFs selecionados em um único arquivo e envie-o para impressão, abrindo a janela de configuração de impressão.
-- **Excluir**: Exclua PDFs que já não são necessários diretamente pela interface do software.
-- **Documentos**: Acesse rapidamente a pasta onde os boletos processados estão salvos.
+- **Impressão de PDFs**: Compile os PDFs selecionados em um único arquivo e envie-o para impressão, abrindo a janela de configuração de impressão.
+- **Exclusão de PDFs**: Exclua PDFs que já não são necessários diretamente pela interface do software.
+- **Abrir Boletos Processados**: Acesse rapidamente a pasta onde os boletos processados estão salvos.
 - **Ajuda**: Uma janela com instruções detalhadas sobre como usar o sistema.
 
 ## Tecnologias Utilizadas
@@ -30,18 +30,20 @@ Foi desenvolvido pensando na formatação para impressão das vias físicas dos 
 
 - **Python 3.8+**
 - **Bibliotecas Python**: As bibliotecas listadas abaixo podem ser instaladas usando o comando `pip`:
- 
+  ```sh
   pip install PyPDF2 pdfplumber pymupdf pywin32 reportlab
-
+  ```
 
 ### Executando o Programa
 
 1. Navegue até a pasta do projeto:
+   ```sh
    cd seu-repositorio
-
+   ```
 2. Execute o programa Python:
+   ```sh
    python boleto_facil.py
-
+   ```
 
 ## Usando o Sistema
 
