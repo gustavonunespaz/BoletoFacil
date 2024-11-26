@@ -1,5 +1,7 @@
 import os
 import re
+import pandas as pd
+from openpyxl import load_workbook
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
@@ -199,6 +201,59 @@ def selecionar_todos(event=None):
         if isinstance(widget, ttk.Checkbutton):
             widget.var.set(True)
 
+# Função para salvar os dados em um arquivo Excel
+def save_to_excel(data, output_file_path):
+    columns = ['Nome', 'Rua', 'Número', 'Bairro', 'CEP', 'Cidade', 'Estado']
+    df = pd.DataFrame(data, columns=columns)
+    df.to_excel(output_file_path, index=False)
+
+# Função para extrair dados do arquivo TXT e criar um DataFrame
+def process_txt_file(txt_file_path):
+    with open(txt_file_path, 'r', encoding='utf-8') as file:
+        lines = [line.strip() for line in file if line.strip()]
+
+    data = []
+    i = 0
+    while i < len(lines):
+        # Obtendo as informações de cada bloco de 3 linhas
+        nome = lines[i]
+        rua_numero = lines[i + 1] if i + 1 < len(lines) else ''
+        bairro_cep_cidade_estado = lines[i + 2] if i + 2 < len(lines) else ''
+
+        # Verificando se o formato do bairro/cep/cidade/estado está diferente, como no caso da Midiã Gomes da Costa
+        if re.match(r'^.*\s\d{8}\s.*$', rua_numero):
+            # Caso especial: linha 2 contém o bairro, cep, cidade e estado
+            bairro_cep_cidade_estado = rua_numero
+            rua_numero = lines[i + 2] if i + 2 < len(lines) else ''
+
+        # Extraindo informações da rua e número
+        rua, numero = rua_numero.split(',', 1) if ',' in rua_numero else (rua_numero, '')
+        rua = rua.strip()
+        numero = numero.strip()
+
+        # Extraindo bairro, cep, cidade e estado
+        bairro_cep_pattern = r'^(.*)\s(\d{8})\s(.*)/(\w{2})$'
+        match = re.match(bairro_cep_pattern, bairro_cep_cidade_estado)
+        if match:
+            bairro = match.group(1).strip()
+            cep = match.group(2).strip()
+            cidade = match.group(3).strip()
+            estado = match.group(4).strip()
+        else:
+            bairro = cep = cidade = estado = ''
+
+        # Removendo prefixo "- " da cidade, se existir
+        if cidade.startswith('- '):
+            cidade = cidade[2:].strip()
+
+        # Adicionando os dados extraídos à lista
+        data.append([nome, rua, numero, bairro, cep, cidade, estado])
+
+        # Avançando para o próximo bloco de 3 linhas
+        i += 3
+
+    return data
+
 # Função para imprimir os PDFs selecionados
 def imprimir_selecionados(event=None):
     """
@@ -245,6 +300,10 @@ def imprimir_selecionados(event=None):
         print(f"Arquivo TXT salvo em: {txt_clientes_correios_path}")
     except Exception as e:
         print(f"Erro ao salvar o arquivo TXT: {e}")
+
+    # Chamar a função para processar o TXT e criar o Excel automaticamente
+    data = process_txt_file(txt_clientes_correios_path)
+    save_to_excel(data, f"{os.path.splitext(txt_clientes_correios_path)[0]}.xlsx")
 
     # Debug: Verificando se o arquivo foi realmente salvo
     if os.path.exists(txt_clientes_correios_path):
