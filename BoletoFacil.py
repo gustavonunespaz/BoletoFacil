@@ -12,6 +12,7 @@ import win32api
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from io import BytesIO
+from datetime import datetime
 
 # Função para imprimir o PDF compilado
 def imprimir_pdf(pdf_path):
@@ -138,7 +139,7 @@ def criar_pdf_final(pdf_path, nome_cliente, endereco_cliente, venda_parcela, dat
     can = canvas.Canvas(packet, pagesize=A4)
 
     # Ajustar o texto para caber dentro do retângulo branco identificado
-    x_text, y_text = 25, 500  # Coordenadas do texto
+    x_text, y_text = 25, 450  # Coordenadas do texto
     max_width = x1 - x0 - 10  # Limitar a largura do texto ao retângulo branco
     font_size = 10  # Tamanho de fonte fixo
     can.setFont("Helvetica", font_size)
@@ -161,7 +162,11 @@ def criar_pdf_final(pdf_path, nome_cliente, endereco_cliente, venda_parcela, dat
     # Adiciona a nova página com os dados do cliente
     nova_pagina = PdfReader(packet).pages[0]
     writer.add_page(nova_pagina)
-    writer.add_page(reader_modificado.pages[0])
+
+    # Inverte a página original e a adiciona
+    pagina_modificada = reader_modificado.pages[0]
+    pagina_modificada.rotate(180)  # Rotaciona a página em 180 graus
+    writer.add_page(pagina_modificada)
 
     # Salva o novo PDF final
     with open(novo_pdf_path, "wb") as output_pdf:
@@ -279,8 +284,7 @@ def imprimir_selecionados(event=None):
     if not os.path.exists(pasta_compilados):
         os.makedirs(pasta_compilados)
 
-    numero_arquivos = len(os.listdir(pasta_compilados)) + 1
-    temp_pdf_path = os.path.join(pasta_compilados, f"{numero_arquivos} - {data_compilacao.strftime('%d-%m-%Y')}.pdf")
+    temp_pdf_path = os.path.join(pasta_compilados, f"{data_compilacao.strftime('%d-%m-%Y')}.pdf")
     with open(temp_pdf_path, "wb") as temp_pdf:
         writer.write(temp_pdf)
 
@@ -289,7 +293,7 @@ def imprimir_selecionados(event=None):
     if not os.path.exists(pasta_correios):
         os.makedirs(pasta_correios)
 
-    txt_clientes_correios_path = os.path.join(pasta_correios, f"{numero_arquivos} - {data_compilacao.strftime('%d-%m-%Y')} - clientes.txt")
+    txt_clientes_correios_path = os.path.join(pasta_correios, f"{data_compilacao.strftime('%d-%m-%Y')} - clientes.txt")
     try:
         with open(txt_clientes_correios_path, "w", encoding="utf-8") as txt_file:
             for page_number in range(0, len(writer.pages), 2):  # Páginas ímpares do PDF compilado
