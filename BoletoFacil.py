@@ -25,6 +25,15 @@ def imprimir_pdf(pdf_path):
     except Exception as e:
         print(f"Erro ao imprimir {pdf_path}: {e}")
 
+# Função para atualizar o contador
+def atualizar_contador():
+    """
+    Atualiza o contador de PDFs selecionados e o total.
+    """
+    total = len(frame_lista.winfo_children())
+    selecionados = sum(1 for widget in frame_lista.winfo_children() if isinstance(widget, ttk.Checkbutton) and widget.var.get())
+    contador_label.set(f"Selecionados: {selecionados} / Total: {total}")
+
 # Função para selecionar e processar arquivos PDF
 def selecionar_arquivos():
     """
@@ -187,6 +196,43 @@ def adicionar_item_lista(pdf_path):
     checkbox.pack(anchor='w', padx=5, pady=2)
     checkbox.bind('<Button-3>', lambda event, path=pdf_path: abrir_pdf(path))
 
+    # Função para adicionar cada PDF processado à lista com uma caixa de seleção
+def adicionar_item_lista(pdf_path):
+    var = tk.BooleanVar()
+    checkbox = ttk.Checkbutton(frame_lista, text=os.path.basename(pdf_path), variable=var)
+    checkbox.var = var
+    checkbox.pdf_path = pdf_path
+    checkbox.pack(anchor='w', padx=5, pady=2)
+    checkbox.bind('<Button-3>', lambda event, path=pdf_path: abrir_pdf(path))
+    atualizar_contador()
+
+# Variável global para rastrear a direção da classificação
+ordem_crescente = True
+
+def classificar_lista():
+    """
+    Classifica os itens da lista de PDFs em ordem alfabética crescente (A-Z) ou decrescente (Z-A).
+    """
+    global ordem_crescente
+    itens = list(frame_lista.winfo_children())
+    itens.sort(key=lambda widget: widget.cget("text"), reverse=not ordem_crescente)
+    
+    # Remove todos os widgets e os adiciona novamente na nova ordem
+    for widget in itens:
+        widget.pack_forget()
+    for widget in itens:
+        widget.pack(anchor="w", padx=5, pady=2)
+    
+    # Alterar a direção da próxima classificação
+    ordem_crescente = not ordem_crescente
+    
+    # Atualizar o contador após adicionar um item
+    atualizar_contador()
+
+    # Atualizar o canvas para incluir o novo item
+    frame_lista.update_idletasks()
+    canvas_lista.configure(scrollregion=canvas_lista.bbox("all"))
+
 # Função para abrir PDF ao clicar com botão direito
 def abrir_pdf(pdf_path):
     """
@@ -197,14 +243,8 @@ def abrir_pdf(pdf_path):
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao abrir o PDF: {e}")
 
-# Função para selecionar todos os itens
-def selecionar_todos(event=None):
-    """
-    Seleciona todos os PDFs na lista de PDFs processados.
-    """
-    for widget in frame_lista.winfo_children():
-        if isinstance(widget, ttk.Checkbutton):
-            widget.var.set(True)
+    # Atualizar o contador após selecionar
+    atualizar_contador()    
 
 # Função para salvar os dados em um arquivo Excel
 def save_to_excel(data, output_file_path):
@@ -366,10 +406,33 @@ def excluir_selecionados():
                 print(f"Erro ao excluir {widget.pdf_path}: {e}")
     messagebox.showinfo("Exclusão", "PDF(s) selecionado(s) excluído(s).")
 
+    # Atualizar o contador após exclusão
+    atualizar_contador()
+
 # Configuração da interface principal
 janela = tk.Tk()
 janela.title("Boleto Fácil - Nunes|Paz")
 janela.geometry("900x600")
+
+# Caixa de seleção para selecionar ou desmarcar todos
+selecao_geral_var = tk.BooleanVar()
+
+def alternar_selecao_geral():
+    """
+    Marca ou desmarca todas as caixas de seleção com base na caixa geral.
+    """
+    for widget in frame_lista.winfo_children():
+        if isinstance(widget, ttk.Checkbutton):
+            widget.var.set(selecao_geral_var.get())
+    atualizar_contador()
+
+checkbox_selecao_geral = ttk.Checkbutton(
+    janela,
+    text="Selecionar Todos",
+    variable=selecao_geral_var,
+    command=alternar_selecao_geral
+)
+checkbox_selecao_geral.pack(anchor="w", padx=20)
 
 # Frame dos botões organizados lado a lado
 frame_botoes = tk.Frame(janela)
@@ -378,9 +441,6 @@ frame_botoes.pack(pady=10)
 # Botões principais
 btn_selecionar = ttk.Button(frame_botoes, text="Carregar PDF", command=selecionar_arquivos)
 btn_selecionar.grid(row=0, column=0, padx=5)
-
-btn_selecionar_todos = ttk.Button(frame_botoes, text="Selecionar Todos", command=selecionar_todos)
-btn_selecionar_todos.grid(row=0, column=1, padx=5)
 
 btn_imprimir = ttk.Button(frame_botoes, text="Imprimir", command=imprimir_selecionados)
 btn_imprimir.grid(row=0, column=2, padx=5)
@@ -394,12 +454,43 @@ btn_documentos.grid(row=0, column=4, padx=5)
 btn_ajuda = ttk.Button(frame_botoes, text="Ajuda", command=abrir_ajuda)
 btn_ajuda.grid(row=0, column=5, padx=5)
 
-# Frame da lista de PDFs processados
-frame_lista = tk.Frame(janela)
-frame_lista.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+btn_classificar = ttk.Button(frame_botoes, text="Classificar A-Z", command=classificar_lista)
+btn_classificar.grid(row=0, column=6, padx=5)
+
+# Variável para armazenar o texto do contador
+contador_label = tk.StringVar()
+contador_label.set("Selecionados: 0 / Total: 0")
+
+# Label para mostrar os contadores
+contador = ttk.Label(janela, textvariable=contador_label, anchor="w")
+contador.pack(fill=tk.X, padx=20, pady=5)
+
+# Frame da lista de PDFs processados com barra de rolagem
+frame_lista_container = tk.Frame(janela)
+frame_lista_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+
+canvas_lista = tk.Canvas(frame_lista_container)
+canvas_lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+scrollbar_lista = ttk.Scrollbar(frame_lista_container, orient=tk.VERTICAL, command=canvas_lista.yview)
+scrollbar_lista.pack(side=tk.RIGHT, fill=tk.Y)
+
+canvas_lista.configure(yscrollcommand=scrollbar_lista.set)
+canvas_lista.bind(
+    "<Configure>",
+    lambda e: canvas_lista.configure(scrollregion=canvas_lista.bbox("all"))
+)
+
+frame_lista = tk.Frame(canvas_lista)
+canvas_lista.create_window((0, 0), window=frame_lista, anchor="nw")
+
+# Adicionando evento de rolagem com o mouse
+def on_mousewheel(event):
+    canvas_lista.yview_scroll(-1 * int(event.delta / 120), "units")
+
+canvas_lista.bind_all("<MouseWheel>", on_mousewheel)
 
 # Adicionando atalhos de teclado
-janela.bind("<Control-a>", selecionar_todos)
 janela.bind("<Control-p>", imprimir_selecionados)
 
 # Inicia o loop principal da interface
