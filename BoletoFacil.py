@@ -7,7 +7,6 @@ from datetime import datetime
 from PyPDF2 import PdfReader, PdfWriter
 import pdfplumber
 import fitz  # PyMuPDF
-import win32api
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from io import BytesIO
@@ -120,7 +119,7 @@ def atualizar_pdf(pdf_path, nome_cliente, endereco, numero, complemento, bairro,
         )
 
         # Linha 2: Endereço, Número, Complemento (segunda linha)
-        endereco_linha2 = f"{endereco}, {numero}, {complemento}".strip(", ")
+        endereco_linha2 = f"{endereco}, {numero} - {complemento}".strip(", ")
         nova_pagina.insert_text(
             fitz.Point(x_start, y_start - 50),  # Posição intermediária
             endereco_linha2,
@@ -152,6 +151,57 @@ def atualizar_pdf(pdf_path, nome_cliente, endereco, numero, complemento, bairro,
         print(f"Endereço atualizado com sucesso em: {pdf_path}")
     except Exception as e:
         print(f"Erro ao atualizar o PDF: {e}")
+
+def adicionar_complemento(pdf_path, complemento):
+    try:
+        # Abrir o documento original
+        documento = fitz.open(pdf_path)
+
+        # Criar um novo PDF com as alterações
+        novo_documento = fitz.open()
+
+        # Copiar a página original para o novo documento
+        pagina1 = documento[0]
+        pagina1_texto = pagina1.get_text("text")
+
+        # Adicionar o complemento na segunda linha (ao lado do número)
+        linhas = pagina1_texto.split("\n")
+        endereco_original = linhas[1]  # Supondo que a linha 2 é o endereço
+        if "," in endereco_original:  # Verifica se tem número para adicionar o complemento
+            endereco_complemento = f"{endereco_original} - {complemento}"
+        else:
+            endereco_complemento = f"{endereco_original}, {complemento}"
+
+        linhas[1] = endereco_complemento  # Atualiza a linha com o complemento
+
+        # Criar nova página formatada
+        nova_pagina = novo_documento.new_page(width=pagina1.rect.width, height=pagina1.rect.height)
+
+        # Inserir o texto atualizado linha por linha
+        x_start, y_start = 25, 400  # Coordenadas iniciais
+        for i, linha in enumerate(linhas):
+            nova_pagina.insert_text(
+                fitz.Point(x_start, y_start - (i * -15)),
+                linha,
+                fontsize=10,
+                fontname="helv",
+                color=(0, 0, 0),
+            )
+
+        # Adicionar outras páginas (se houver)
+        for page_num in range(1, len(documento)):
+            novo_documento.insert_pdf(documento, from_page=page_num, to_page=page_num)
+
+        # Fechar o documento original para poder sobrescrevê-lo
+        documento.close()
+
+        # Salvar no arquivo original
+        novo_documento.save(pdf_path)
+        novo_documento.close()
+
+        print(f"Arquivo atualizado com sucesso: {pdf_path}")
+    except Exception as e:
+        print(f"Erro ao adicionar o complemento: {e}")
 
 # Função para criar o PDF final formatado e organizado nas pastas
 def criar_pdf_final(pdf_path, nome_cliente, endereco_cliente, venda_parcela, data_vencimento):
@@ -396,6 +446,42 @@ def abrir_editor_de_endereco():
 
     ttk.Button(nova_janela, text="Salvar", command=salvar_endereco).grid(row=4, column=0, columnspan=6, pady=20)
 
+def abrir_editor_de_complemento():
+    """
+    Abre uma janela para adicionar um complemento ao endereço no PDF selecionado.
+    """
+    selecionados = [
+        widget for widget in frame_lista.winfo_children()
+        if isinstance(widget, ttk.Checkbutton) and widget.var.get()
+    ]
+
+    if len(selecionados) != 1:
+        messagebox.showinfo(
+            "Seleção Inválida", "Por favor, selecione apenas um PDF para editar o endereço."
+        )
+        return
+
+    pdf_path = selecionados[0].pdf_path
+
+    # Janela para adicionar complemento
+    nova_janela = tk.Toplevel(janela)
+    nova_janela.title("Adicionar Complemento")
+    nova_janela.geometry("400x200")
+
+    ttk.Label(nova_janela, text="Complemento:").pack(pady=10)
+    entrada_complemento = ttk.Entry(nova_janela, width=50)
+    entrada_complemento.pack(pady=10)
+
+    def salvar_complemento():
+        complemento = entrada_complemento.get().strip()
+        if complemento:
+            adicionar_complemento(pdf_path, complemento)
+            nova_janela.destroy()
+        else:
+            messagebox.showerror("Erro", "O complemento não pode estar vazio!")
+
+    ttk.Button(nova_janela, text="Salvar", command=salvar_complemento).pack(pady=20)
+
 def alternar_selecao_geral():
     """
     Marca ou desmarca todas as caixas de seleção com base na caixa geral.
@@ -421,9 +507,6 @@ frame_botoes.pack(pady=10)
 btn_selecionar = ttk.Button(frame_botoes, text="Carregar PDF", command=selecionar_arquivos)
 btn_selecionar.grid(row=0, column=0, padx=5)
 
-btn_editar = ttk.Button(frame_botoes, text="Alterar Endereço", command=abrir_editor_de_endereco)
-btn_editar.grid(row=0, column=7, padx=5)
-
 btn_excluir = ttk.Button(frame_botoes, text="Excluir", command=excluir_selecionados)
 btn_excluir.grid(row=0, column=3, padx=5)
 
@@ -432,6 +515,9 @@ btn_documentos.grid(row=0, column=4, padx=5)
 
 btn_classificar = ttk.Button(frame_botoes, text="Classificar A-Z", command=classificar_lista)
 btn_classificar.grid(row=0, column=6, padx=5)
+
+btn_editar = ttk.Button(frame_botoes, text="Adicionar Complemento", command=abrir_editor_de_complemento)
+btn_editar.grid(row=0, column=7, padx=5)
 
 # Variável para armazenar o texto do contador
 contador_label = tk.StringVar()
