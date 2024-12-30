@@ -13,17 +13,6 @@ from reportlab.lib.pagesizes import A4
 from io import BytesIO
 from datetime import datetime
 
-# Função para imprimir o PDF compilado
-def imprimir_pdf(pdf_path):
-    """
-    Envia o PDF compilado para impressão.
-    """
-    try:
-        win32api.ShellExecute(0, "print", pdf_path, None, ".", 0)
-        print(f"PDF compilado enviado para impressão: {pdf_path}")
-    except Exception as e:
-        print(f"Erro ao imprimir {pdf_path}: {e}")
-
 # Função para atualizar o contador
 def atualizar_contador():
     """
@@ -99,6 +88,70 @@ def extrair_dados_cliente_e_instrucoes(pdf_path):
     except Exception as e:
         print(f"Erro ao extrair dados do arquivo {pdf_path}: {e}")
         return None, None, None, None
+
+def atualizar_pdf(pdf_path, nome_cliente, endereco, numero, complemento, bairro, cep, cidade_estado):
+    """
+    Remove a página 1, cria uma nova com as informações atualizadas e mantém a página 2 intacta.
+    """
+    try:
+        # Abrir o documento original
+        documento = fitz.open(pdf_path)
+
+        # Extrair a página 2 (mantida intacta)
+        pagina2 = documento[1]  # Página 2 existente
+
+        # Criar um novo PDF com a página 1 formatada
+        novo_documento = fitz.open()
+
+        # Página 1 (nova)
+        nova_pagina = novo_documento.new_page(width=fitz.paper_rect("a4").width, height=fitz.paper_rect("a4").height)
+
+        # Inserir texto na página 1 com formatação
+        x_start = 25  # Margem inicial para o texto
+        y_start = 450  # Coordenada inicial (linha 1)
+
+        # Linha 1: Nome do Cliente (primeira linha no topo)
+        nova_pagina.insert_text(
+            fitz.Point(x_start, y_start - 70),  # Posição mais alta
+            nome_cliente,
+            fontsize=10,
+            fontname="helv",
+            color=(0, 0, 0)
+        )
+
+        # Linha 2: Endereço, Número, Complemento (segunda linha)
+        endereco_linha2 = f"{endereco}, {numero}, {complemento}".strip(", ")
+        nova_pagina.insert_text(
+            fitz.Point(x_start, y_start - 50),  # Posição intermediária
+            endereco_linha2,
+            fontsize=10,
+            fontname="helv",
+            color=(0, 0, 0)
+        )
+
+        # Linha 3: Bairro, CEP, Cidade/Estado (última linha)
+        endereco_linha3 = f"{bairro} {cep} - {cidade_estado}".strip()
+        nova_pagina.insert_text(
+            fitz.Point(x_start, y_start - 30),  # Posição mais baixa
+            endereco_linha3,
+            fontsize=10,
+            fontname="helv",
+            color=(0, 0, 0)
+        )
+
+        # Adicionar a página 2 original
+        novo_documento.insert_pdf(documento, from_page=1, to_page=1)
+
+        # Fechar o arquivo original antes de sobrescrevê-lo
+        documento.close()
+
+        # Salvar o PDF substituindo o original
+        novo_documento.save(pdf_path)
+        novo_documento.close()
+
+        print(f"Endereço atualizado com sucesso em: {pdf_path}")
+    except Exception as e:
+        print(f"Erro ao atualizar o PDF: {e}")
 
 # Função para criar o PDF final formatado e organizado nas pastas
 def criar_pdf_final(pdf_path, nome_cliente, endereco_cliente, venda_parcela, data_vencimento):
@@ -245,150 +298,12 @@ def abrir_pdf(pdf_path):
     # Atualizar o contador após selecionar
     atualizar_contador()    
 
-# Função para salvar os dados em um arquivo Excel
-def save_to_excel(data, output_file_path):
-    columns = ['Nome', 'Rua', 'Número', 'Bairro', 'CEP', 'Cidade', 'Estado']
-    df = pd.DataFrame(data, columns=columns)
-    df.to_excel(output_file_path, index=False)
-
-# Função para extrair dados do arquivo TXT e criar um DataFrame
-def process_txt_file(txt_file_path):
-    with open(txt_file_path, 'r', encoding='utf-8') as file:
-        lines = [line.strip() for line in file if line.strip()]
-
-    data = []
-    i = 0
-    while i < len(lines):
-        # Obtendo as informações de cada bloco de 3 linhas
-        nome = lines[i]
-        rua_numero = lines[i + 1] if i + 1 < len(lines) else ''
-        bairro_cep_cidade_estado = lines[i + 2] if i + 2 < len(lines) else ''
-
-        # Verificando se o formato do bairro/cep/cidade/estado está diferente, como no caso da Midiã Gomes da Costa
-        if re.match(r'^.*\s\d{8}\s.*$', rua_numero):
-            # Caso especial: linha 2 contém o bairro, cep, cidade e estado
-            bairro_cep_cidade_estado = rua_numero
-            rua_numero = lines[i + 2] if i + 2 < len(lines) else ''
-
-        # Extraindo informações da rua e número
-        rua, numero = rua_numero.split(',', 1) if ',' in rua_numero else (rua_numero, '')
-        rua = rua.strip()
-        numero = numero.strip()
-
-        # Extraindo bairro, cep, cidade e estado
-        bairro_cep_pattern = r'^(.*)\s(\d{8})\s(.*)/(\w{2})$'
-        match = re.match(bairro_cep_pattern, bairro_cep_cidade_estado)
-        if match:
-            bairro = match.group(1).strip()
-            cep = match.group(2).strip()
-            cidade = match.group(3).strip()
-            estado = match.group(4).strip()
-        else:
-            bairro = cep = cidade = estado = ''
-
-        # Removendo prefixo "- " da cidade, se existir
-        if cidade.startswith('- '):
-            cidade = cidade[2:].strip()
-
-        # Adicionando os dados extraídos à lista
-        data.append([nome, rua, numero, bairro, cep, cidade, estado])
-
-        # Avançando para o próximo bloco de 3 linhas
-        i += 3
-
-    return data
-
-# Função para imprimir os PDFs selecionados
-def imprimir_selecionados(event=None):
-    """
-    Cria um PDF compilado de todos os PDFs selecionados e envia para impressão.
-    """
-    writer = PdfWriter()
-    clientes_info = []
-    for widget in frame_lista.winfo_children():
-        if isinstance(widget, ttk.Checkbutton) and widget.var.get():
-            reader = PdfReader(widget.pdf_path)
-            for page in reader.pages:
-                writer.add_page(page)
-            nome_cliente, endereco_cliente, _, _ = extrair_dados_cliente_e_instrucoes(widget.pdf_path)
-            if nome_cliente and endereco_cliente:
-                clientes_info.append((nome_cliente, endereco_cliente))
-
-    # Salvar o PDF compilado na pasta "Compilados"
-    data_compilacao = datetime.now()
-    ano_compilacao = data_compilacao.strftime("%Y")
-    meses_em_portugues = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-    mes_compilacao_nome = meses_em_portugues[data_compilacao.month - 1]
-    pasta_compilados = os.path.join("Documentos", "Compilados", ano_compilacao, mes_compilacao_nome)
-    if not os.path.exists(pasta_compilados):
-        os.makedirs(pasta_compilados)
-
-    temp_pdf_path = os.path.join(pasta_compilados, f"{data_compilacao.strftime('%d-%m-%Y')}.pdf")
-    with open(temp_pdf_path, "wb") as temp_pdf:
-        writer.write(temp_pdf)
-
-    # Criar um arquivo TXT com nome e endereço dos clientes na pasta "Correios"
-    pasta_correios = os.path.join("Documentos", "Correios", ano_compilacao, mes_compilacao_nome)
-    if not os.path.exists(pasta_correios):
-        os.makedirs(pasta_correios)
-
-    txt_clientes_correios_path = os.path.join(pasta_correios, f"{data_compilacao.strftime('%d-%m-%Y')} - clientes.txt")
-    try:
-        with open(txt_clientes_correios_path, "w", encoding="utf-8") as txt_file:
-            for page_number in range(0, len(writer.pages), 2):  # Páginas ímpares do PDF compilado
-                page = writer.pages[page_number]
-                texto = page.extract_text()
-                if texto:
-                    txt_file.write(texto + "\n\n")
-        print(f"Arquivo TXT salvo em: {txt_clientes_correios_path}")
-    except Exception as e:
-        print(f"Erro ao salvar o arquivo TXT: {e}")
-
-    # Chamar a função para processar o TXT e criar o Excel automaticamente
-    data = process_txt_file(txt_clientes_correios_path)
-    save_to_excel(data, f"{os.path.splitext(txt_clientes_correios_path)[0]}.xlsx")
-
-    # Debug: Verificando se o arquivo foi realmente salvo
-    if os.path.exists(txt_clientes_correios_path):
-        print(f"Verificação: O arquivo TXT foi salvo corretamente em {txt_clientes_correios_path}")
-    else:
-        print(f"Erro: O arquivo TXT não foi salvo em {txt_clientes_correios_path}")
-
-    # Abrir o PDF compilado para visualização
-    try:
-        os.startfile(temp_pdf_path)
-        print(f"PDF compilado aberto: {temp_pdf_path}")
-    except Exception as e:
-        print(f"Erro ao abrir o arquivo {temp_pdf_path}: {e}")
-    messagebox.showinfo("PDF Aberto", "O PDF compilado foi aberto para visualização e impressão.")
-
 # Função para abrir a pasta de boletos gerados
 def abrir_documentos():
     """
     Abre a pasta onde os documentos estão salvos.
     """
     os.startfile("Documentos")
-
-# Função para abrir uma janela com todas as funcionalidades do sistema
-def abrir_ajuda():
-    """
-    Abre uma janela de ajuda com informações sobre como usar o sistema.
-    """
-    nova_janela = tk.Toplevel(janela)
-    nova_janela.title("Ajuda - Funcionalidades do Sistema")
-    nova_janela.geometry("600x400")
-
-    texto_ajuda = (
-        "Passo a passo para usar o sistema:\n"
-        "1. Carregar PDF: Selecione os arquivos PDF que deseja processar.\n"
-        "2. Selecionar Todos: Marque todos os PDFs carregados.\n"
-        "3. Imprimir: Compile os PDFs selecionados em um único arquivo e envie para impressão.\n"
-        "4. Documentos: Abra a pasta onde os documentos estão salvos.\n\n"
-        "Funcionalidades adicionais:\n"
-        "- Clique com o botão direito em um PDF na lista para abri-lo diretamente."
-    )
-
-    ttk.Label(nova_janela, text=texto_ajuda, wraplength=580, justify="left").pack(pady=20, padx=20)
 
 # Função para excluir os PDFs selecionados
 def excluir_selecionados():
@@ -416,6 +331,71 @@ janela.geometry("900x600")
 # Caixa de seleção para selecionar ou desmarcar todos
 selecao_geral_var = tk.BooleanVar()
 
+def abrir_editor_de_endereco():
+    """
+    Abre uma janela para editar o endereço de um PDF selecionado.
+    """
+    selecionados = [
+        widget for widget in frame_lista.winfo_children()
+        if isinstance(widget, ttk.Checkbutton) and widget.var.get()
+    ]
+
+    if len(selecionados) != 1:
+        messagebox.showinfo(
+            "Seleção Inválida", "Por favor, selecione apenas um PDF para editar o endereço."
+        )
+        return
+
+    pdf_path = selecionados[0].pdf_path
+    nome_cliente = os.path.basename(pdf_path).split(" - ")[1].strip()  # Obtém o nome do cliente do nome do arquivo
+
+    # Janela de edição
+    nova_janela = tk.Toplevel(janela)
+    nova_janela.title("Editar Endereço")
+    nova_janela.geometry("600x300")
+
+    # Linha 1: Nome do Cliente (não editável)
+    ttk.Label(nova_janela, text="Nome do Cliente:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    ttk.Label(nova_janela, text=nome_cliente).grid(row=0, column=1, columnspan=3, padx=10, pady=10, sticky="w")
+
+    # Linha 2: Endereço, Número, Complemento
+    ttk.Label(nova_janela, text="Endereço:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    entrada_endereco = ttk.Entry(nova_janela, width=30)
+    entrada_endereco.grid(row=1, column=1, padx=5, pady=5)
+    ttk.Label(nova_janela, text="Número:").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+    entrada_numero = ttk.Entry(nova_janela, width=10)
+    entrada_numero.grid(row=1, column=3, padx=5, pady=5)
+    ttk.Label(nova_janela, text="Complemento:").grid(row=1, column=4, padx=5, pady=5, sticky="w")
+    entrada_complemento = ttk.Entry(nova_janela, width=15)
+    entrada_complemento.grid(row=1, column=5, padx=5, pady=5)
+
+    # Linha 3: Bairro, CEP, Cidade/Estado
+    ttk.Label(nova_janela, text="Bairro:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    entrada_bairro = ttk.Entry(nova_janela, width=20)
+    entrada_bairro.grid(row=2, column=1, padx=5, pady=5)
+    ttk.Label(nova_janela, text="CEP:").grid(row=2, column=2, padx=5, pady=5, sticky="w")
+    entrada_cep = ttk.Entry(nova_janela, width=15)
+    entrada_cep.grid(row=2, column=3, padx=5, pady=5)
+    ttk.Label(nova_janela, text="Cidade/Estado:").grid(row=2, column=4, padx=5, pady=5, sticky="w")
+    entrada_cidade_estado = ttk.Entry(nova_janela, width=20)
+    entrada_cidade_estado.grid(row=2, column=5, padx=5, pady=5)
+
+    def salvar_endereco():
+        endereco = entrada_endereco.get()
+        numero = entrada_numero.get()
+        complemento = entrada_complemento.get()
+        bairro = entrada_bairro.get()
+        cep = entrada_cep.get()
+        cidade_estado = entrada_cidade_estado.get()
+
+        if endereco and numero and bairro and cep and cidade_estado:
+            atualizar_pdf(pdf_path, nome_cliente, endereco, numero, complemento, bairro, cep, cidade_estado)
+            nova_janela.destroy()
+        else:
+            messagebox.showerror("Erro", "Todos os campos devem ser preenchidos!")
+
+    ttk.Button(nova_janela, text="Salvar", command=salvar_endereco).grid(row=4, column=0, columnspan=6, pady=20)
+
 def alternar_selecao_geral():
     """
     Marca ou desmarca todas as caixas de seleção com base na caixa geral.
@@ -441,17 +421,14 @@ frame_botoes.pack(pady=10)
 btn_selecionar = ttk.Button(frame_botoes, text="Carregar PDF", command=selecionar_arquivos)
 btn_selecionar.grid(row=0, column=0, padx=5)
 
-btn_imprimir = ttk.Button(frame_botoes, text="Imprimir", command=imprimir_selecionados)
-btn_imprimir.grid(row=0, column=2, padx=5)
+btn_editar = ttk.Button(frame_botoes, text="Alterar Endereço", command=abrir_editor_de_endereco)
+btn_editar.grid(row=0, column=7, padx=5)
 
 btn_excluir = ttk.Button(frame_botoes, text="Excluir", command=excluir_selecionados)
 btn_excluir.grid(row=0, column=3, padx=5)
 
 btn_documentos = ttk.Button(frame_botoes, text="Documentos", command=abrir_documentos)
 btn_documentos.grid(row=0, column=4, padx=5)
-
-btn_ajuda = ttk.Button(frame_botoes, text="Ajuda", command=abrir_ajuda)
-btn_ajuda.grid(row=0, column=5, padx=5)
 
 btn_classificar = ttk.Button(frame_botoes, text="Classificar A-Z", command=classificar_lista)
 btn_classificar.grid(row=0, column=6, padx=5)
@@ -488,9 +465,6 @@ def on_mousewheel(event):
     canvas_lista.yview_scroll(-1 * int(event.delta / 120), "units")
 
 canvas_lista.bind_all("<MouseWheel>", on_mousewheel)
-
-# Adicionando atalhos de teclado
-janela.bind("<Control-p>", imprimir_selecionados)
 
 # Inicia o loop principal da interface
 janela.mainloop()
