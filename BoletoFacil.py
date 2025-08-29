@@ -178,13 +178,13 @@ def criar_pdf_final(pdf_path, nome_cliente, endereco_cliente, venda_parcela, dat
     if not os.path.exists(nova_pasta):
         os.makedirs(nova_pasta)
 
-    novo_nome_arquivo = f"{data_formatada} - {nome_cliente}"
+    novo_nome_arquivo = f"{nome_cliente} - {data_formatada}"
     if venda_parcela:
         novo_nome_arquivo += f" - {venda_parcela.replace('/', '-')}"
     novo_pdf_path = os.path.join(nova_pasta, f"{novo_nome_arquivo}.pdf")
 
     documento = fitz.open(pdf_path)
-    x0, y0, x1, y1 = 30, 710, 550, 810
+    x0, y0, x1, y1 = 30, 750, 550, 810
 
     for page_number in range(len(documento)):
         pagina = documento.load_page(page_number)
